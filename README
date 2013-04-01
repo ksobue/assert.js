@@ -1,0 +1,2 @@
+assert.js provides JavaScript assertion functions in AMD (Asynchronous Module Definition) format for use with require.js.
+
