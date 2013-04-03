@@ -1,22 +1,6 @@
 define([], function () {
   "use strict";
   
-  function fail(actual, expected, message, operator) {
-//    debugger;
-    
-    var stacktrace = "";
-    try {
-      throw new Error();
-    } catch (ex) {
-      if (ex.stack !== undefined) {
-        var lines = ex.stack.split("\n");
-        stacktrace = lines.join("\n");
-      }
-    }
-    
-    throw new Error(message);
-  };
-  
   function isDeepEqual(obj1, obj2) {
     if (obj1 === obj2) {
       return true;
@@ -24,10 +8,6 @@ define([], function () {
     
     if (typeof obj1 === typeof obj2) {
       switch (typeof obj1) {
-      case "undefined":
-      case "boolean":
-      case "number":
-      case "string":
       case "function":
         return obj1 === obj2;
         
@@ -52,11 +32,6 @@ define([], function () {
             return obj1.getTime() === obj2.getTime();
           }
           
-        } else if (obj1 instanceof Error) {
-          if (obj2 instanceof Error) {
-            // TODO: implement me.
-          }
-          
         } else if (obj1 instanceof RegExp) {
           if (obj2 instanceof RegExp) {
             return ["global", "ignoreCase", "lastIndex", "multiline", "source"].every(function(prop) {
@@ -75,6 +50,18 @@ define([], function () {
           }
         }
         break;
+        
+      case "undefined":
+      case "boolean":
+      case "number":
+      case "string":
+        // Won't reach here.
+        // These types could have been compared by strict equal(===) at the beginning of ths function.
+        break;
+      
+      default:
+        // Unexpected object type.
+        break;
       }
     }
     
@@ -82,48 +69,38 @@ define([], function () {
   }
   
   function ok(value, opt_message) {
-    if (!!! value) {
-      fail(value, true, opt_message || "(no assert message)", "==");
-    }
+    assert(value, opt_message);
   };
   
   function equal(actual, expected, opt_message) {
-    if (actual != expected) {
-      fail(actual, expected, opt_message || "(no assert message)", "==");
-    }
+    assert(actual == expected, opt_message);
   };
   
   function notEqual(actual, expected, opt_message) {
-    if (actual == expected) {
-      fail(actual, expected, opt_message || "(no assert message)", "!=");
-    }
+    assert(actual != expected, opt_message);
   };
   
   function deepEqual(actual, expected, opt_message) {
-    if (! isDeepEqual(actual, expected)) {
-      fail(actual, expected, opt_message || "(no assert message)", "deepEqual");
-    }
+    assert(isDeepEqual(actual, expected), opt_message);
   };
   
   function notDeepEqual(actual, expected, opt_message) {
-    if (isDeepEqual(actual, expected)) {
-      fail(actual, expected, opt_message || "(no assert message)", "notDeepEqual");
-    }
+    assert(! isDeepEqual(actual, expected), opt_message);
   };
   
   function strictEqual(actual, expected, opt_message) {
-    if (actual !== expected) {
-      fail(actual, expected, opt_message || "(no assert message)", "===");
-    }
+    assert(actual === expected, opt_message);
   };
   
   function notStrictEqual(actual, expected, opt_message) {
-    if (actual === expected) {
-      fail(actual, expected, opt_message || "(no assert message)", "!==");
-    }
+    assert(actual !== expected, opt_message);
   };
   
-  function throws(block, opt_error, opt_message) {
+  function throws(block, opt_error, opt_message) {  // "throws" is not reserved keyword in ECMAScript version 5.
+    if (arguments.length === 2) {
+      opt_message = opt_error;
+    }
+    
     var ok = false;
     
     var exception = null;
@@ -149,15 +126,38 @@ define([], function () {
       }
     }
     
-    if (! ok) {
-      fail(ok, true, opt_message || "(no assert message)");
+    assert(ok === true, opt_message);
+  };
+  
+  
+  var options = {
+    breakOnError: false,
+    useConsole: false,
+    failOnError: true
+  };
+  
+  function assert(value, opt_message) {
+    var message = opt_message !== undefined ? opt_message : "(no assert message)";
+    
+    if (!!! value) {
+      if (options.breakOnError) {
+        debugger;
+      }
+      
+      if (options.useConsole && window && window.console) {
+        if (console.assert) {
+          console.assert(value, message);
+        } else if (console.error) {
+          console.error(message);
+        }
+      }
+      
+      if (options.failOnError) {
+        throw new Error(message);
+      }
     }
   };
-  
-  
-  function assert(value, message) {
-    ok(value, message);
-  };
+  assert.options = options;
   assert.ok = ok;
   assert.equal = equal;
   assert.notEqual = notEqual;
